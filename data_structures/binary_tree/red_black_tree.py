@@ -1,26 +1,40 @@
+"""
+python/black : true
+flake8 : passed
+"""
+from __future__ import annotations
+
+from collections.abc import Iterator
+
+
 class RedBlackTree:
     """
     A Red-Black tree, which is a self-balancing BST (binary search
     tree).
-
     This tree has similar performance to AVL trees, but the balancing is
     less strict, so it will perform faster for writing/deleting nodes
     and slower for reading in the average case, though, because they're
     both balanced binary search trees, both will get the same asymptotic
-    perfomance.
-
+    performance.
     To read more about them, https://en.wikipedia.org/wiki/Red–black_tree
-
     Unless otherwise specified, all asymptotic runtimes are specified in
     terms of the size of the tree.
     """
-    def __init__(self, label=None, color=0, parent=None, left=None, right=None):
+
+    def __init__(
+        self,
+        label: int | None = None,
+        color: int = 0,
+        parent: RedBlackTree | None = None,
+        left: RedBlackTree | None = None,
+        right: RedBlackTree | None = None,
+    ) -> None:
         """Initialize a new Red-Black Tree node with the given values:
-            label: The value associated with this node
-            color: 0 if black, 1 if red
-            parent: The parent to this node
-            left: This node's left child
-            right: This node's right child
+        label: The value associated with this node
+        color: 0 if black, 1 if red
+        parent: The parent to this node
+        left: This node's left child
+        right: This node's right child
         """
         self.label = label
         self.parent = parent
@@ -30,33 +44,35 @@ class RedBlackTree:
 
     # Here are functions which are specific to red-black trees
 
-    def rotate_left(self):
+    def rotate_left(self) -> RedBlackTree:
         """Rotate the subtree rooted at this node to the left and
         returns the new root to this subtree.
-
-        Perfoming one rotation can be done in O(1).
+        Performing one rotation can be done in O(1).
         """
         parent = self.parent
         right = self.right
+        if right is None:
+            return self
         self.right = right.left
         if self.right:
             self.right.parent = self
         self.parent = right
         right.left = self
         if parent is not None:
-            if parent.left is self:
+            if parent.left == self:
                 parent.left = right
             else:
                 parent.right = right
         right.parent = parent
         return right
-    
-    def rotate_right(self):
+
+    def rotate_right(self) -> RedBlackTree:
         """Rotate the subtree rooted at this node to the right and
         returns the new root to this subtree.
-
         Performing one rotation can be done in O(1).
         """
+        if self.left is None:
+            return self
         parent = self.parent
         left = self.left
         self.left = left.right
@@ -72,11 +88,10 @@ class RedBlackTree:
         left.parent = parent
         return left
 
-    def insert(self, label):
+    def insert(self, label: int) -> RedBlackTree:
         """Inserts label into the subtree rooted at self, performs any
         rotations necessary to maintain balance, and then returns the
         new root to this subtree (likely self).
-
         This is guaranteed to run in O(log(n)) time.
         """
         if self.label is None:
@@ -99,7 +114,7 @@ class RedBlackTree:
                 self.right._insert_repair()
         return self.parent or self
 
-    def _insert_repair(self):
+    def _insert_repair(self) -> None:
         """Repair the coloring from inserting into a tree."""
         if self.parent is None:
             # This node is the root, so it just needs to be black
@@ -112,25 +127,32 @@ class RedBlackTree:
             if color(uncle) == 0:
                 if self.is_left() and self.parent.is_right():
                     self.parent.rotate_right()
-                    self.right._insert_repair()
+                    if self.right:
+                        self.right._insert_repair()
                 elif self.is_right() and self.parent.is_left():
                     self.parent.rotate_left()
-                    self.left._insert_repair()
+                    if self.left:
+                        self.left._insert_repair()
                 elif self.is_left():
-                    self.grandparent.rotate_right()
-                    self.parent.color = 0
-                    self.parent.right.color = 1
+                    if self.grandparent:
+                        self.grandparent.rotate_right()
+                        self.parent.color = 0
+                    if self.parent.right:
+                        self.parent.right.color = 1
                 else:
-                    self.grandparent.rotate_left()
-                    self.parent.color = 0
-                    self.parent.left.color = 1
+                    if self.grandparent:
+                        self.grandparent.rotate_left()
+                        self.parent.color = 0
+                    if self.parent.left:
+                        self.parent.left.color = 1
             else:
                 self.parent.color = 0
-                uncle.color = 0
-                self.grandparent.color = 1
-                self.grandparent._insert_repair()
+                if uncle and self.grandparent:
+                    uncle.color = 0
+                    self.grandparent.color = 1
+                    self.grandparent._insert_repair()
 
-    def remove(self, label):
+    def remove(self, label: int) -> RedBlackTree:
         """Remove label from this tree."""
         if self.label == label:
             if self.left and self.right:
@@ -138,8 +160,9 @@ class RedBlackTree:
                 # so we replace this node with the greatest one less than
                 # it and remove that.
                 value = self.left.get_max()
-                self.label = value
-                self.left.remove(value)
+                if value is not None:
+                    self.label = value
+                    self.left.remove(value)
             else:
                 # This node has at most one non-None child, so we don't
                 # need to replace
@@ -149,10 +172,11 @@ class RedBlackTree:
                     # The only way this happens to a node with one child
                     # is if both children are None leaves.
                     # We can just remove this node and call it a day.
-                    if self.is_left():
-                        self.parent.left = None
-                    else:
-                        self.parent.right = None
+                    if self.parent:
+                        if self.is_left():
+                            self.parent.left = None
+                        else:
+                            self.parent.right = None
                 else:
                     # The node is black
                     if child is None:
@@ -177,7 +201,7 @@ class RedBlackTree:
                             self.left.parent = self
                         if self.right:
                             self.right.parent = self
-        elif self.label > label:
+        elif self.label is not None and self.label > label:
             if self.left:
                 self.left.remove(label)
         else:
@@ -185,8 +209,15 @@ class RedBlackTree:
                 self.right.remove(label)
         return self.parent or self
 
-    def _remove_repair(self):
+    def _remove_repair(self) -> None:
         """Repair the coloring of the tree that may have been messed up."""
+        if (
+            self.parent is None
+            or self.sibling is None
+            or self.parent.sibling is None
+            or self.grandparent is None
+        ):
+            return
         if color(self.sibling) == 1:
             self.sibling.color = 0
             self.parent.color = 1
@@ -194,48 +225,64 @@ class RedBlackTree:
                 self.parent.rotate_left()
             else:
                 self.parent.rotate_right()
-        if color(self.parent) == 0 and color(self.sibling) == 0 \
-                and color(self.sibling.left) == 0 \
-                and color(self.sibling.right) == 0:
+        if (
+            color(self.parent) == 0
+            and color(self.sibling) == 0
+            and color(self.sibling.left) == 0
+            and color(self.sibling.right) == 0
+        ):
             self.sibling.color = 1
             self.parent._remove_repair()
             return
-        if color(self.parent) == 1 and color(self.sibling) == 0 \
-                and color(self.sibling.left) == 0 \
-                and color(self.sibling.right) == 0:
+        if (
+            color(self.parent) == 1
+            and color(self.sibling) == 0
+            and color(self.sibling.left) == 0
+            and color(self.sibling.right) == 0
+        ):
             self.sibling.color = 1
             self.parent.color = 0
             return
-        if (self.is_left() 
-                and color(self.sibling) == 0
-                and color(self.sibling.right) == 0
-                and color(self.sibling.left) == 1):
+        if (
+            self.is_left()
+            and color(self.sibling) == 0
+            and color(self.sibling.right) == 0
+            and color(self.sibling.left) == 1
+        ):
             self.sibling.rotate_right()
             self.sibling.color = 0
-            self.sibling.right.color = 1
-        if (self.is_right()
-                and color(self.sibling) == 0
-                and color(self.sibling.right) == 1
-                and color(self.sibling.left) == 0):
+            if self.sibling.right:
+                self.sibling.right.color = 1
+        if (
+            self.is_right()
+            and color(self.sibling) == 0
+            and color(self.sibling.right) == 1
+            and color(self.sibling.left) == 0
+        ):
             self.sibling.rotate_left()
             self.sibling.color = 0
-            self.sibling.left.color = 1
-        if (self.is_left()
-                and color(self.sibling) == 0
-                and color(self.sibling.right) == 1):
+            if self.sibling.left:
+                self.sibling.left.color = 1
+        if (
+            self.is_left()
+            and color(self.sibling) == 0
+            and color(self.sibling.right) == 1
+        ):
             self.parent.rotate_left()
             self.grandparent.color = self.parent.color
             self.parent.color = 0
             self.parent.sibling.color = 0
-        if (self.is_right()
-                and color(self.sibling) == 0
-                and color(self.sibling.left) == 1):
+        if (
+            self.is_right()
+            and color(self.sibling) == 0
+            and color(self.sibling.left) == 1
+        ):
             self.parent.rotate_right()
             self.grandparent.color = self.parent.color
             self.parent.color = 0
             self.parent.sibling.color = 0
 
-    def check_color_properties(self):
+    def check_color_properties(self) -> bool:
         """Check the coloring of the tree, and return True iff the tree
         is colored in a way which matches these five properties:
         (wording stolen from wikipedia article)
@@ -245,35 +292,30 @@ class RedBlackTree:
          4. If a node is red, then both its children are black.
          5. Every path from any node to all of its descendent NIL nodes
             has the same number of black nodes.
-
         This function runs in O(n) time, because properties 4 and 5 take
         that long to check.
         """
         # I assume property 1 to hold because there is nothing that can
         # make the color be anything other than 0 or 1.
-
         # Property 2
         if self.color:
             # The root was red
-            print('Property 2')
-            return False;
-
+            print("Property 2")
+            return False
         # Property 3 does not need to be checked, because None is assumed
         # to be black and is all the leaves.
-
         # Property 4
         if not self.check_coloring():
-            print('Property 4')
+            print("Property 4")
             return False
-
         # Property 5
         if self.black_height() is None:
-            print('Property 5')
+            print("Property 5")
             return False
         # All properties were met
         return True
 
-    def check_coloring(self):
+    def check_coloring(self) -> bool:
         """A helper function to recursively check Property 4 of a
         Red-Black Tree. See check_color_properties for more info.
         """
@@ -286,12 +328,12 @@ class RedBlackTree:
             return False
         return True
 
-    def black_height(self):
+    def black_height(self) -> int | None:
         """Returns the number of black nodes from this node to the
         leaves of the tree, or None if there isn't one such value (the
         tree is color incorrectly).
         """
-        if self is None:
+        if self is None or self.left is None or self.right is None:
             # If we're already at a leaf, there is no path
             return 1
         left = RedBlackTree.black_height(self.left)
@@ -304,27 +346,25 @@ class RedBlackTree:
             return None
         # Return the black depth of children, plus one if this node is
         # black
-        return left + (1-self.color)
+        return left + (1 - self.color)
 
     # Here are functions which are general to all binary search trees
 
-    def __contains__(self, label):
+    def __contains__(self, label: int) -> bool:
         """Search through the tree for label, returning True iff it is
         found somewhere in the tree.
-        
         Guaranteed to run in O(log(n)) time.
         """
         return self.search(label) is not None
 
-    def search(self, label):
+    def search(self, label: int) -> RedBlackTree | None:
         """Search through the tree for label, returning its node if
         it's found, and None otherwise.
-
         This method is guaranteed to run in O(log(n)) time.
         """
         if self.label == label:
             return self
-        elif label > self.label:
+        elif self.label is not None and label > self.label:
             if self.right is None:
                 return None
             else:
@@ -335,13 +375,12 @@ class RedBlackTree:
             else:
                 return self.left.search(label)
 
-    def floor(self, label):
+    def floor(self, label: int) -> int | None:
         """Returns the largest element in this tree which is at most label.
-        
         This method is guaranteed to run in O(log(n)) time."""
         if self.label == label:
             return self.label
-        elif self.label > label:
+        elif self.label is not None and self.label > label:
             if self.left:
                 return self.left.floor(label)
             else:
@@ -353,14 +392,13 @@ class RedBlackTree:
                     return attempt
             return self.label
 
-    def ceil(self, label):
+    def ceil(self, label: int) -> int | None:
         """Returns the smallest element in this tree which is at least label.
-        
         This method is guaranteed to run in O(log(n)) time.
         """
         if self.label == label:
             return self.label
-        elif self.label < label:
+        elif self.label is not None and self.label < label:
             if self.right:
                 return self.right.ceil(label)
             else:
@@ -372,9 +410,8 @@ class RedBlackTree:
                     return attempt
             return self.label
 
-    def get_max(self):
+    def get_max(self) -> int | None:
         """Returns the largest element in this tree.
-
         This method is guaranteed to run in O(log(n)) time.
         """
         if self.right:
@@ -383,9 +420,8 @@ class RedBlackTree:
         else:
             return self.label
 
-    def get_min(self):
+    def get_min(self) -> int | None:
         """Returns the smallest element in this tree.
-
         This method is guaranteed to run in O(log(n)) time.
         """
         if self.left:
@@ -395,15 +431,15 @@ class RedBlackTree:
             return self.label
 
     @property
-    def grandparent(self):
+    def grandparent(self) -> RedBlackTree | None:
         """Get the current node's grandparent, or None if it doesn't exist."""
         if self.parent is None:
             return None
         else:
             return self.parent.parent
-    
+
     @property
-    def sibling(self):
+    def sibling(self) -> RedBlackTree | None:
         """Get the current node's sibling, or None if it doesn't exist."""
         if self.parent is None:
             return None
@@ -412,18 +448,22 @@ class RedBlackTree:
         else:
             return self.parent.left
 
-    def is_left(self):
+    def is_left(self) -> bool:
         """Returns true iff this node is the left child of its parent."""
-        return self.parent and self.parent.left is self
+        if self.parent is None:
+            return False
+        return self.parent.left is self.parent.left is self
 
-    def is_right(self):
+    def is_right(self) -> bool:
         """Returns true iff this node is the right child of its parent."""
-        return self.parent and self.parent.right is self
+        if self.parent is None:
+            return False
+        return self.parent.right is self
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return True
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Return the number of nodes in this tree.
         """
@@ -434,55 +474,67 @@ class RedBlackTree:
             ln += len(self.right)
         return ln
 
-    def preorder_traverse(self):
+    def preorder_traverse(self) -> Iterator[int | None]:
         yield self.label
         if self.left:
             yield from self.left.preorder_traverse()
         if self.right:
             yield from self.right.preorder_traverse()
 
-    def inorder_traverse(self):
+    def inorder_traverse(self) -> Iterator[int | None]:
         if self.left:
             yield from self.left.inorder_traverse()
         yield self.label
         if self.right:
             yield from self.right.inorder_traverse()
 
-
-    def postorder_traverse(self):
+    def postorder_traverse(self) -> Iterator[int | None]:
         if self.left:
             yield from self.left.postorder_traverse()
         if self.right:
             yield from self.right.postorder_traverse()
         yield self.label
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         from pprint import pformat
-        if self.left is None and self.right is None:
-            return "'%s %s'" % (self.label, (self.color and 'red') or 'blk')
-        return pformat({'%s %s' % (self.label, (self.color and 'red') or 'blk'):
-                            (self.left, self.right)},
-                       indent=1)
 
-    def __eq__(self, other):
+        if self.left is None and self.right is None:
+            return f"'{self.label} {(self.color and 'red') or 'blk'}'"
+        return pformat(
+            {
+                f"{self.label} {(self.color and 'red') or 'blk'}": (
+                    self.left,
+                    self.right,
+                )
+            },
+            indent=1,
+        )
+
+    def __eq__(self, other: object) -> bool:
         """Test if two trees are equal."""
+        if not isinstance(other, RedBlackTree):
+            return NotImplemented
         if self.label == other.label:
             return self.left == other.left and self.right == other.right
         else:
             return False
 
-def color(node):
+
+def color(node: RedBlackTree | None) -> int:
     """Returns the color of a node, allowing for None leaves."""
     if node is None:
         return 0
     else:
         return node.color
 
+
 """
-Code for testing the various functions of the red-black tree.
+Code for testing the various
+functions of the red-black tree.
 """
 
-def test_rotations():
+
+def test_rotations() -> bool:
     """Test that the rotate_left and rotate_right functions work."""
     # Make a tree to test on
     tree = RedBlackTree(0)
@@ -517,7 +569,8 @@ def test_rotations():
         return False
     return True
 
-def test_insertion_speed():
+
+def test_insertion_speed() -> bool:
     """Test that the tree balances inserts to O(log(n)) by doing a lot
     of them.
     """
@@ -526,7 +579,8 @@ def test_insertion_speed():
         tree = tree.insert(i)
     return True
 
-def test_insert():
+
+def test_insert() -> bool:
     """Test the insert() method of the tree correctly balances, colors,
     and inserts.
     """
@@ -546,7 +600,8 @@ def test_insert():
     ans.right.right.right = RedBlackTree(12, 1, ans.right.right)
     return tree == ans
 
-def test_insert_and_search():
+
+def test_insert_and_search() -> bool:
     """Tests searching through the tree for values."""
     tree = RedBlackTree(0)
     tree.insert(8)
@@ -563,7 +618,8 @@ def test_insert_and_search():
         return False
     return True
 
-def test_insert_delete():
+
+def test_insert_delete() -> bool:
     """Test the insert() and delete() method of the tree, verifying the
     insertion and removal of elements, and the balancing of the tree.
     """
@@ -586,7 +642,8 @@ def test_insert_delete():
         return False
     return True
 
-def test_floor_ceil():
+
+def test_floor_ceil() -> bool:
     """Tests the floor and ceiling functions in the tree."""
     tree = RedBlackTree(0)
     tree.insert(-16)
@@ -601,7 +658,8 @@ def test_floor_ceil():
             return False
     return True
 
-def test_min_max():
+
+def test_min_max() -> bool:
     """Tests the min and max functions in the tree."""
     tree = RedBlackTree(0)
     tree.insert(-16)
@@ -614,10 +672,11 @@ def test_min_max():
         return False
     return True
 
-def test_tree_traversal():
+
+def test_tree_traversal() -> bool:
     """Tests the three different tree traversal functions."""
     tree = RedBlackTree(0)
-    tree.insert(-16)
+    tree = tree.insert(-16)
     tree.insert(16)
     tree.insert(8)
     tree.insert(24)
@@ -631,35 +690,50 @@ def test_tree_traversal():
         return False
     return True
 
-def main():
-    if test_rotations():
-        print('Rotating right and left works!')
-    else:
-        print('Rotating right and left doesn\'t work. :(')
-    if test_insert():
-        print('Inserting works!')
-    else:
-        print('Inserting doesn\'t work :(')
-    if test_insert_and_search():
-        print('Searching works!')
-    else:
-        print('Searching doesn\'t work :(')
-    if test_insert_delete():
-        print('Deleting works!')
-    else:
-        print('Deleting doesn\'t work :(')
-    if test_floor_ceil():
-        print('Floor and ceil work!')
-    else:
-        print('Floor and ceil don\'t work :(')
-    if test_tree_traversal():
-        print('Tree traversal works!')
-    else:
-        print('Tree traversal doesn\'t work :(')
-    print('Testing tree balancing...')
-    print('This should only be a few seconds.')
-    test_insertion_speed()
-    print('Done!')
 
-if __name__ == '__main__':
+def test_tree_chaining() -> bool:
+    """Tests the three different tree chaining functions."""
+    tree = RedBlackTree(0)
+    tree = tree.insert(-16).insert(16).insert(8).insert(24).insert(20).insert(22)
+    if list(tree.inorder_traverse()) != [-16, 0, 8, 16, 20, 22, 24]:
+        return False
+    if list(tree.preorder_traverse()) != [0, -16, 16, 8, 22, 20, 24]:
+        return False
+    if list(tree.postorder_traverse()) != [-16, 8, 20, 24, 22, 16, 0]:
+        return False
+    return True
+
+
+def print_results(msg: str, passes: bool) -> None:
+    print(str(msg), "works!" if passes else "doesn't work :(")
+
+
+def pytests() -> None:
+    assert test_rotations()
+    assert test_insert()
+    assert test_insert_and_search()
+    assert test_insert_delete()
+    assert test_floor_ceil()
+    assert test_tree_traversal()
+    assert test_tree_chaining()
+
+
+def main() -> None:
+    """
+    >>> pytests()
+    """
+    print_results("Rotating right and left", test_rotations())
+    print_results("Inserting", test_insert())
+    print_results("Searching", test_insert_and_search())
+    print_results("Deleting", test_insert_delete())
+    print_results("Floor and ceil", test_floor_ceil())
+    print_results("Tree traversal", test_tree_traversal())
+    print_results("Tree traversal", test_tree_chaining())
+    print("Testing tree balancing...")
+    print("This should only be a few seconds.")
+    test_insertion_speed()
+    print("Done!")
+
+
+if __name__ == "__main__":
     main()
